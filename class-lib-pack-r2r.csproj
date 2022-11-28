@@ -1,31 +1,41 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFrameworks Condition=" '$(TargetFramework)' == '' ">net7.0-windows10.0.19041.0;net7.0-android;net7.0-ios</TargetFrameworks>
     <RootNamespace>class_lib_pack_r2r</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <_TargetFramework>$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)'))</_TargetFramework>
+    <WindowsRuntimeIdentifiers>win-x64;win-x86;win-arm64</WindowsRuntimeIdentifiers>
   </PropertyGroup>
 
   <!-- Specifics for this scenario -->
   <PropertyGroup>
-    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
-    <PublishReadyToRun>true</PublishReadyToRun>
     <PackageId>$(RootNamespace).$(RuntimeIdentifier)</PackageId>
-    <IsPackable Condition=" '$(RuntimeIdentifier)' == '' ">false</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IsPackable Condition=" '$(TargetFramework)' == '' ">false</IsPackable>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(_TargetFramework)' == 'windows' ">
+    <RuntimeIdentifiers>$(WindowsRuntimeIdentifiers)</RuntimeIdentifiers>
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(_TargetFramework)' != 'windows' ">
+    <PackageId>$(RootNamespace).$(_TargetFramework)</PackageId>
   </PropertyGroup>
 
-  <Target Name="_BeforePack" Condition=" '$(RuntimeIdentifier)' != '' " BeforeTargets="GenerateNuspec">
+  <Target Name="_BeforePack" Condition=" '$(TargetFramework)' != '' " BeforeTargets="GenerateNuspec">
     <ItemGroup>
-      <_PackageFiles Include="$(PublishDir)$(TargetFileName)" PackagePath="lib/$(TargetFramework)" />
+      <_PackageFiles Condition=" '$(TargetPlatformIdentifier)' != 'windows' " Include="$(TargetPath)" PackagePath="lib/$(TargetFramework)$(TargetPlatformVersion)" />
+      <_PackageFiles Condition=" '$(TargetPlatformIdentifier)' == 'windows' " Include="$(PublishDir)$(TargetFileName)" PackagePath="lib/$(TargetFramework)" />
     </ItemGroup>
   </Target>
 
-  <Target Name="_PackForRuntimeIdentifiers" Condition=" '$(RuntimeIdentifier)' == '' " AfterTargets="Pack">
+  <Target Name="_PackForRuntimeIdentifiers" Condition=" '$(TargetFramework)' == '' " AfterTargets="Pack">
     <ItemGroup>
-      <_RIDs Include="$(RuntimeIdentifiers)" />
-      <_Project Include="$(MSBuildProjectFile)" AdditionalProperties="RuntimeIdentifier=%(_RIDs.Identity)" />
+      <_WindowsRIDs Include="$(WindowsRuntimeIdentifiers)" />
+      <_Project Include="$(MSBuildProjectFile)" AdditionalProperties="TargetFramework=net7.0-windows10.0.19041.0;RuntimeIdentifier=%(_WindowsRIDs.Identity)" />
+      <_Project Include="$(MSBuildProjectFile)" AdditionalProperties="TargetFramework=net7.0-android" />
+      <_Project Include="$(MSBuildProjectFile)" AdditionalProperties="TargetFramework=net7.0-ios" />
     </ItemGroup>
     <MSBuild Projects="@(_Project)" Targets="Publish;Pack" BuildInParallel="$(BuildInParallel)" />
   </Target>
