@@ -7,4 +7,27 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Specifics for this scenario -->
+  <PropertyGroup>
+    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PackageId>$(RootNamespace).$(RuntimeIdentifier)</PackageId>
+    <IsPackable Condition=" '$(RuntimeIdentifier)' == '' ">false</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+  </PropertyGroup>
+
+  <Target Name="_BeforePack" Condition=" '$(RuntimeIdentifier)' != '' " BeforeTargets="GenerateNuspec">
+    <ItemGroup>
+      <_PackageFiles Include="$(PublishDir)$(TargetFileName)" PackagePath="lib/$(TargetFramework)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_PackForRuntimeIdentifiers" Condition=" '$(RuntimeIdentifier)' == '' " AfterTargets="Pack">
+    <ItemGroup>
+      <_RIDs Include="$(RuntimeIdentifiers)" />
+      <_Project Include="$(MSBuildProjectFile)" AdditionalProperties="RuntimeIdentifier=%(_RIDs.Identity)" />
+    </ItemGroup>
+    <MSBuild Projects="@(_Project)" Targets="Publish;Pack" BuildInParallel="$(BuildInParallel)" />
+  </Target>
+
 </Project>
